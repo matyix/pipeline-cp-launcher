@@ -1,0 +1,369 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageNamePrefix": {
+            "type": "string",
+            "maxLength": 11,
+            "defaultValue": "storage",
+            "metadata": {
+              "description": "The value to use for starting the storage account name. Use only lowercase letters and numbers."
+            }
+        },
+        "sshUserName": {
+            "defaultValue": "ubuntu",
+            "type": "string",
+            "metadata": {
+                "description": "These credentials can be used to remotely access the cluster."
+            }
+        },
+        "sshPublicKey": {
+            "type": "string",
+            "metadata": {
+                "description": "SSH public key as a string."
+            }
+        },
+        "vmSize": {
+            "defaultValue": "Standard_A2",
+            "allowedValues": [
+                "Standard_A1",
+                "Standard_A2"
+            ],
+            "type": "string",
+            "metadata": {
+                "description": "The size of the Virtual Machine. Ex: Standard_XX where XX can A1, A2, A3 etc"
+            }
+        },
+        "vmName": {
+            "defaultValue": "pipeline-cp",
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Virtual Machine."
+            }
+        },
+        "smtpServerAddress": {
+            "defaultValue": "",
+            "type": "string"
+        },
+        "smtpUser": {
+            "defaultValue": "",
+            "type": "string"
+        },
+        "smtpPassword": {
+            "defaultValue": "",
+            "type": "securestring"
+        },
+        "smtpFrom": {
+            "defaultValue": "",
+            "type": "string"
+        },
+        "slackWebhookUrl": {
+            "defaultValue": "https://hooks.slack.com/",
+            "type": "string",
+            "metadata": {
+                "description": "Insert slack webhook url"
+            }
+        },
+        "slackChannel": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Specify a Slack channel by name with \"channel\": \"#other-channel\", or send a Slackbot message to a specific user with \"channel\": \"@username\""
+            }
+        },
+        "pipelineIngUser": {
+            "defaultValue": "admin",
+            "type": "string",
+            "metadata": {
+                "description": "Specify the username for Pipeline api"
+            }
+        },
+        "pipelineIngPass": {
+            "minLength": 8,
+            "type": "securestring",
+            "metadata": {
+                "description": "Specify the password for Pipeline api"
+            }
+        },
+        "pipelineImageTag": {
+            "defaultValue": "0.2.0",
+            "type": "string",
+            "metadata": {
+                "description": "Specify the Pipline image version"
+            }
+        },
+        "promIngUser": {
+            "defaultValue": "admin",
+            "minLength": 1,
+            "type": "string",
+            "metadata": {
+                "description": "Specify the username for Prometheus"
+            }
+        },
+        "promIngPass": {
+            "type": "securestring",
+            "minLength": 8,
+            "metadata": {
+                "description": "Specify the password for Prometheus"
+            }
+        },
+        "grafanaUser": {
+            "type": "string",
+            "defaultValue": "admin",
+            "minLength": 1,
+            "metadata": {
+                "description": "Specify the username for Grafana dashboard"
+            }
+        },
+        "grafanaPass": {
+            "type": "securestring",
+            "minLength": 8,
+            "metadata": {
+                "description": "Specify the password for Grafana dashboard"
+            }
+        },
+        "droneOrgs": {
+            "type": "string",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "droneGithubClient": {
+            "type": "string",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "droneGithubSecret": {
+            "type": "string",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "azureClientId": {
+            "type": "string",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "azureClientSecret": {
+            "type": "securestring",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "azureSubscriptionId": {
+            "type": "string",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "azureTenantId": {
+            "type": "string",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "pipelineHelmRetryattempt": {
+            "type": "string",
+            "defaultValue": "30",
+            "metadata": {
+                "description": ""
+            }
+        },
+        "pipelineHelmRetrysleepseconds": {
+            "type": "string",
+            "defaultValue": "15",
+            "metadata": {
+                "description": ""
+            }
+        }
+    },
+    "variables": {
+        "imagePublisher": "Canonical",
+        "imageOffer": "UbuntuServer",
+        "imageSku": "16.04-LTS",
+        "imageVersion": "latest",
+        "storageAccount": "[concat(parameters('storageNamePrefix'),tolower(uniqueString(resourceGroup().id, deployment().name, subscription().subscriptionId)))]",
+        "userDataScript": "[concat('#!/bin/bash\n','echo H4sIAGjSaFoCA81a/3PaOBb/3X+Fjmba5gfZkKZJlxv2joCbMEkgA6SdvdsbRtjCqNiyK8kktM3+7fck22AT2vSme3QzU7Cl954+7+l9k+izvzmpFM6UcYfyJZoSObcsSRXCMeJxyuGxeE1YQmeEhcU7FYLes3z63kIWvU9iodBVZ9K+ump1LOvy9swd9t2xO5oM3Su3PXIn4/Z5a9mw39ivLHfc6VbGX9l1u3FqXb4ZTbr9KkvDbhzbp9aFe3VdFXVkn9p162Y4uHbHF+7tjoWOLMtLRYiwRHOlEtl0nIR4CxJQaXthnPp2EMdBSG0vjhySKMePPf2NF3RlB0mAvqD8DRHfR9ii3jxGNZ9OjTwQB9P2Ip1SwakCoSx20OYV31POSIgiwngN/Yocqox4R8ap8IA8ZFLZvlMSoEeswppd96zX7k/eDgf9sdvvtnjMGVdUEE+xJbU0tAA2IE18oijCq/UI41KREPReod8tBH96QgnCpZaLjS3yGRl7ROXPdKrINKTFlLEQThULqyOMM/VoQJBoJnEg4jsRx8U0mHNBBVhFb+Iru4Hr6TTlKm380Tix68f2UU6nDRBS1TLOgev10jDxo13DuYE9zlp1+7WWXMzKlQTlCwQsVnGSPwu54l7+zANBi3HlJX4aFW9kw5Cs1DzmGJy/UFc7U/b44aNlPUPvKejIXyh0R7hCKoa9CATxKVJzGtlmPyIiFmgeh36hjvn2VFhovaWPtd5FiLNusgiazUGiWMxls9mqYTyLwXWwF/MZyKytF8Qf9W4X0yvYROtZ4QZzGkZZIBRRIFUsIApy9ycJkyYESkg0j6M/8MHn7dB7wCHj6T0mkX9ybCsi7OAThAo8oPtPgEEqASZrINxB6wxjWdqMa8fEBW4YhaSzkopG2iaUaw/MHac0DmwQEPlwRRS5k17IKkMfZMyPViQKLUtrgEC1BAwNNjRJrohE/TzZzEEgGkMV2/PdXDmDZbFIZ5bWS3CQWuBpv3cyAwM9V5AEqJCGGicivl9l9msefN6dKx9qT8vRO0fFkoo/QZb05tRPwz9Fln4XcaiFRYSDVX5QKBjeX0vYLh5P8CYklTRnhjLzBPo3EvtcYsl86pES6seF6eH7JBl76IcfFwX/IiI/Yk44X323vO2ghnwO+9LcEdbf4ySQWimOKES4J5tQZBt2HQsvN+uUKU4i5kDOY8SfNhtQ1O2jN1gcZaIFmYE3OPl3MwRZUpkpqB90xhbNhn1sN8wIhEjk6A8KuTQ1a73Jl/nAooj5K4hyR+dBFkQkwYKGMfGby7rmP7QsSISIQUpAtYPPWWD++5//eaihv0MWyRMJSlLIFno+H+c0S+pkSRFY7C6G1O0DLqhvOg3MWEjXDQUk3FqRTgW5swOm5lDdIBy1zShXJqNOCf9EmCmTjm6iIHFCdCQ4QwSGggQn9AY7d3pVexWFNZ34TarZ7Nxm1rKg4+m9a4/d3k3r4GWG5gJdU0WgCyBNJVKaAQNcjZNf7KPXYNHs24lyKsdkSu5RJ9fSMX3FjMBI3WHJ8hg+2r4vqJQwkAi2hK3qFUP/gLSDIelIMErrqN44xfVjXD96DiaPiGopeq9qh9bN7dlVr7NHlOk0ZN7/CBL+irJs2hooXguWQH6ms5AFc4UhKXoL2O1yqvXhUzGdVLKl0MHn9Z48VEg9IMSwkiBYQvelCXOrPFSYrHXVIUkSQh2ffd0DYAFDbDz/ERlowritJ3UvDz0rQ5iiF/ILBj4wKIW9gPoDbWCrvmvsd667Gz2hVWDQS/DYzyYxNJABbb2q41dHpyenX148WhxyPZtBSG9XJzsrxtHCZwLhBDm6R3RM42x5yTd0KFPmsW5BC37H0cFLBsqlh83sITjcRVo00rrmdAb9t73z1i4qaElZuG7LdOuVxHobwxBSbUQlnBmotPwYco8MKfSNr+EpOwq8J5AaeGDDX83KEkghR+dNhbT1YN9fzmOpcyM0avLQDGKoj3Tr7JClg2Y/HuW1GG+6EUF1k59vCvE8OKBpd10DRFl+Nh0TynL8NrMXplq+XhhaMh9w54Q4n8EC1gShJcJWMWU2ZeMWOYJWadVmvqrpuYpoyp2oAJyT5CY3lObIY4y7w6ToyW3Z7Elm/szJnBiOWaadszy/9FbC5mUvcA6IzemulKp1mdNtaJ6gyg36HPpQaZdodZovScoOY6UBo555nYGbz3csUy4MujOGiiuqsMsUjo4YSXT/OVmSMAXP0f0uMlmmPGLpg92jUejTP8BRAcLwWttSBPAKCUCAdaEQjtzO0B1P2p2OOxpNLt3foDC+sIvVbei1R4a27YHp5SVdfWkdFPwvoEOuLKfgTPX8OYqWj4d/ACx4EgQ8YN2AnPS6j3CuEfZ8g9Gw7QmiDIm30CVPW/Sq3bmcvHfPLgaDy8nt8KqKdKRJ7fd0Oo/jxa0IM3vm/PuEC47NOS1B7ly0+313J9xORrvBmjP/dcy7bhttAulG5WcQ23BOoCxN0r+sqb8J3fvJlo9UonseA/16fDMZucN37nDS7naHEIvfVgB4J3nDlOHPhe0Ru+7O19hvAXy/fe0+jVqz6Yqzhq0H9gg7IdBjFrBv2qPR+8Gw+zRszQZts7+GrQf2CFvFa9DjwdNwVbwGquI9wpwBqDXQt8PB9dNQNcsarH7ZE9wZ9GQr6I0KP77p3bhXvb476fXPjT9XszXTt5xS2prcwC3z7xly7sMv44RyKUNknBMad5KIBjqoKKI9/HCnIhWPLkvekzLaKcrmB2fZMv3Gax4Zv8S8X7hPmL5QYmP2x0pUDF8SuydF8gujwu7nw/bbdr+9MXs+b+enTXNUuS3sXmLeL9wibRdwtYG/CvembOGSAA15H5h9AaenWAQGcXc4gFgcDM8zvGauQEv50t7MG7hr3r2CzS7cvJBRrjagz3vji9uzSeeq5/bH30JfIdyoUZb6E9TZHMUqKLNz2XeokxFuq7M5oO0l7bBEZ21zxalIUC1U1+3z/LK5kuA1rQ3EWYKpCtgzbvIpFTRzgPyg+a/boZs7yuOjpqbuGOr8pLlLzM9TYeNQFTVKDrVLleyU/xV1foo3mfUluLInmPk5tLw3o9uzUWfYuxn3Bv3dOzQqce7Yp6rgn6GaopxUHW7s9ttfc7ixod6hSCFmXypc0DAaUiVWbaVolKhKsHfddxPwsuFv7fHYvb7ZcjfNaosSr1FmW+CeSvZ62ZG+TBzp23Vf7lZmdOW6NyN9n9wdfU2jspSqWuWZ/5Nuxa/f6Nct8eYWPr8BzX4pt/UvDaVZ/fqIBYzk02kawPcdMbe6ikU0ThU6qddLl/r6trKwhWNLObfgn/7PMwHlCCskJEF4io7rv5zodXYwOMyfGKo+qtWs/wLNwaDhoCQAAA== | base64 -d | gunzip | ','SMTP_SERVER_ADDRESS=',parameters('smtpServerAddress'),' ','SMTP_USER=',parameters('smtpUser'),' ','SMTP_PASSWORD=',base64(parameters('smtpPassword')),' ','SMTP_FROM=',parameters('smtpFrom'),' ','SLACK_WEBHOOK_URL=',parameters('slackWebhookUrl'),' ','SLACK_CHANNEL=',parameters('slackChannel'),' ','PIPELINE_ING_USER=',parameters('pipelineIngUser'),' ','PIPELINE_ING_PASS=',base64(parameters('pipelineIngPass')),' ','PIPELINE_IMAGE_TAG=',parameters('pipelineImageTag'),' ','PROM_ING_USER=',parameters('promIngUser'),' ','PROM_ING_PASS=',parameters('promIngPass'),' ','GRAFANA_USER=',parameters('grafanaUser'),' ','GRAFANA_PASS=',parameters('grafanaPass'),' ','DRONE_ORGS=',parameters('droneOrgs'),' ','DRONE_GITHUB_CLIENT=',parameters('droneGithubClient'),' ','DRONE_GITHUB_SECRET=',parameters('droneGithubSecret'),' ','AZURE_CLIENT_ID=',base64(parameters('azureClientId')),' ','AZURE_CLIENT_SECRET=',base64(parameters('azureClientSecret')),' ','AZURE_SUBSCRIPTION_ID=',base64(parameters('azureSubscriptionId')),' ','AZURE_TENANT_ID=',base64(parameters('azureTenantId')),' ','PIPELINE_HELM_RETRYATTEMPT=',parameters('pipelineHelmRetryattempt'),' ','PIPELINE_HELM_RETRYSLEEPSECONDS=',parameters('pipelineHelmRetrysleepseconds'),' ','bash')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccount')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Control Plane Storage Account"
+            },
+            "properties": {
+                "accountType": "Standard_LRS"
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "ControlPlane-PublicIP",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Control Plane Public IP Address"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[toLower('ControlPlane')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "ControlPlane-VirtualNetwork",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Control Plane VirtualNetwork"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "ControlPlane-VirtualNetwork-Subnet",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "ControlPlane-NetworkSecurityGroups",
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Control Plane Network Security Group"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "ssh",
+                        "properties": {
+                            "description": "Allow SSH",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "http",
+                        "properties": {
+                            "description": "Allow HTTP",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 210,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "ControlPlane-NetworkInterface",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Control Plane Network Interface"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'ControlPlane-PublicIP')]"
+                            },
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', 'ControlPlane-VirtualNetwork'), '/subnets/ControlPlane-VirtualNetwork-Subnet')]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "Microsoft.Network/publicIPAddresses/ControlPlane-PublicIP",
+                "Microsoft.Network/virtualNetworks/ControlPlane-VirtualNetwork"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('vmName')]",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "Control Plane VM"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('sshUserName')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[concat('/home/',parameters('sshUserName'),'/.ssh/authorized_keys')]",
+                                    "keyData": "[parameters('sshPublicKey')]"
+                                }
+                            ]
+                        }
+                    },
+                    "customData": "[base64(variables('userDataScript'))]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('imageSku')]",
+                        "version": "[variables('imageVersion')]"
+                    },
+                    "osDisk": {
+                        "name": "OS-Disk",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', 'ControlPlane-NetworkInterface')]"
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccount'))]",
+                "Microsoft.Network/networkInterfaces/ControlPlane-NetworkInterface"
+            ]
+        }
+    ],
+    "outputs": {
+    }
+}
