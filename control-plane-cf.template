@@ -153,6 +153,7 @@ Parameters:
     Description: Pick the image id from here https://github.com/banzaicloud/pipeline-cp-launcher/blob/0.2.0/README.md
     Type: String
     ConstraintDescription: ''
+    Default: 'ami-c070c0b9'
 
   GithubOrgs:
     Description: Comma-separated list of authorized Github organizations.
